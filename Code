@@ -1,0 +1,513 @@
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.util.*;
+
+public class Starter{
+	public static void main(String[] args) throws Exception {
+		BufferedReader fh =
+				new BufferedReader(new FileReader("iot.txt"));
+		//First line contains the language names
+		String s = fh.readLine(); 
+		List<String> langs =
+				new ArrayList<>(Arrays.asList(s.split("\t")));
+		langs.remove(0);	//Throw away the first word - "week"
+		TreeMap<String,HashMap<String,Integer>> iot = new TreeMap<>();
+		while ((s=fh.readLine())!=null)
+		{
+			String [] wrds = s.split("\t");
+			HashMap<String,Integer> interest = new HashMap<>();
+			for(int i=0;i<langs.size();i++)
+				interest.put(langs.get(i), Integer.parseInt(wrds[i+1]));
+			iot.put(wrds[0], interest);
+		}
+		fh.close();
+		HashMap<Integer,HashMap<String,HashMap<String,Integer>>>
+			regionsByYear = new HashMap<>();
+		for (int i=2004;i<2016;i++)
+		{
+			BufferedReader fh1 =
+					new BufferedReader(new FileReader(i+".txt"));
+			String s1 = fh1.readLine(); //Throw away the first line
+			HashMap<String,HashMap<String,Integer>> year = new HashMap<>();
+			while ((s1=fh1.readLine())!=null)
+			{
+				String [] wrds = s1.split("\t");
+				HashMap<String,Integer>langMap = new HashMap<>();
+				for(int j=1;j<wrds.length;j++){
+					langMap.put(langs.get(j-1), Integer.parseInt(wrds[j]));
+				}
+				year.put(wrds[0],langMap);
+			}
+			regionsByYear.put(i,year);
+			fh1.close();
+		}
+		
+		// Data structures available are: langs, iot, regionsByYear
+		// langs is a list of languages
+		// iot is interest over time - a map from week to a map from languages
+		// regionsByYear maps years onto a map of regions onto a map of languages
+
+		
+		//1) How many weeks does the dataset cover in total?
+		
+		System.out.println("1) How many weeks does the dataset cover in total? " + iot.size());
+		System.out.println("");
+		
+		//2) What was the interest in JavaScript in the week "2014-10-12 - 2014-10-18"?  
+		
+		int interest = iot.get("2014-10-12 - 2014-10-18").get("JavaScript");
+		System.out.println("2) What was the interest in JavaScript in the week '2014-10-12 - 2014-10-18'? " + interest);
+		System.out.println("");
+		
+		//3) In which week did Java's level of interest first dropped below 50?
+		
+		String week = "";
+		for (String wk : iot.keySet()) {
+			if (iot.get(wk).get("java") < 50) {
+				week = wk;
+				break;
+			}
+		}
+		System.out.println("3) In which week did Java's level of interest first dropped below 50? " + week);
+		System.out.println("");
+		
+		//4) In how many weeks was there more interests in C++ over C#?
+		
+		int weeks = 0;
+		for (String wk : iot.keySet()) {
+			if (iot.get(wk).get("c++") > iot.get(wk).get("c#"))
+				weeks++;
+		}
+		System.out.println("4) In how many weeks was there more interests in C++ over C#? " + weeks);
+		System.out.println("");
+		
+		//5) How many regions have never demonstrated any interest in Python?
+		
+		//Set of all regions
+		Set<String> countries = new HashSet<>();
+		for (int year : regionsByYear.keySet()) {
+			for (String country : regionsByYear.get(year).keySet()) {
+				countries.add(country);
+			}
+		}
+		
+		//Set of all years
+		Set<Integer> years = regionsByYear.keySet();
+		
+		int acc = 0;
+		
+		//Checking each country year by year
+		for (String country : countries) {
+			boolean allYears0 = true;
+			for (int year : years) {
+				//Making sure that the country in question was checked on the said year
+				if (regionsByYear.get(year).keySet().contains(country)) {
+					//If there's even one week in any of the years when interest in Python wasn't 0, allYears0 is false.
+					if (regionsByYear.get(year).get(country).get("python") != 0)
+						allYears0 = false;
+				}
+			}
+			//If for the country in question the interest in Python was on each week 0, the accumulator is incremented by one.
+			if (allYears0)
+				acc++;
+		}
+		
+		System.out.println("5) How many regions have never demonstrated any interest in Python? " + acc);
+		System.out.println("");
+		
+		//6) Which regions have demonstrated interests in exactly two programming language in 2010?
+		
+		System.out.println("6) Which regions have demonstrated interests in exactly two programming language in 2010? ");
+		for (String country : regionsByYear.get(2010).keySet()) {
+			acc = 0;
+			String l = "";
+			for (String lang : langs)
+				if (regionsByYear.get(2010).get(country).get(lang) != 0) {
+					acc++;
+					l += " " + lang;
+				}
+			if (acc == 2)
+				System.out.println(country + l);
+		}
+		System.out.println("");
+		
+		//7) What are the most and least popular programming languages all over the world in 2014 ()?
+		
+		TreeMap<Integer, String> pop = new TreeMap<>();
+		
+		List<String> y2014 = new ArrayList<>();
+		for (String wk : iot.keySet()) {
+			if (wk.contains("2014")) {
+				y2014.add(wk);
+			}
+		}
+		for (String lang : langs) {
+			acc = 0;
+			for (String wk : y2014){
+				if (iot.get(wk).keySet().contains(lang))
+					acc += iot.get(wk).get(lang);
+			}
+			pop.put(acc, lang);
+		}
+		System.out.println("7) What are the most and least popular programming languages all over the world in 2014 ()?");
+		System.out.println("Most popular: " + pop.lastEntry());
+		System.out.println("Least popular: " + pop.firstEntry());
+		
+		System.out.println("");
+		
+		//8) Which are the least popular programming languages in the United Kingdom for each of the years 2009 to 2014?
+		
+		Integer[] y09y14 = {2009, 2010, 2011, 2012, 2013, 2014};
+
+		System.out.println("8) Which are the least popular programming languages in the United Kingdom for each of the years 2009 to 2014?");
+
+		for (int year : y09y14) {
+			TreeMap<Integer, String> popularity = new TreeMap<>();
+			for (String lang : langs) {
+				popularity.put(regionsByYear.get(year).get("United Kingdom").get(lang), lang);
+			}
+			System.out.println(year + " : " + popularity.get(popularity.firstKey()));
+		}
+		System.out.println("");
+		
+		//9) In which year did JavaScript have the greatest minimum interest? Consider the year that week starts in.
+		
+		TreeMap<String, Integer> mins = new TreeMap<>();
+		for (String wk : iot.keySet()) {
+			String year = wk.substring(0,4);
+			if (mins.keySet().contains(year)) {
+				mins.put(year, Math.min(mins.get(year),iot.get(wk).get("JavaScript")));
+			} else {
+				mins.put(year, iot.get(wk).get("JavaScript"));
+			}
+		}
+		System.out.print("9) In which year did JavaScript have the greatest minimum interest? ");
+		int maxmin = 0;
+		String maxyear = "";
+		for (String year : mins.keySet())
+			if (mins.get(year) > maxmin) {
+				maxmin = mins.get(year);
+				maxyear = year;
+			}
+		System.out.println(maxyear);
+		System.out.println("");
+		
+		//10) Since 2010, which regions have demonstrated the most interests in Python, and 
+		//which programming languages were those regions least interested in?
+		
+		HashMap<String, Integer> iip = new HashMap<>();
+		for (int y = 2010; y <= 2015; y++) {
+			Set<String> ycountries = regionsByYear.get(y).keySet();
+			for (String country : ycountries) {
+				if (iip.containsKey(country)) {
+					iip.put(country, iip.get(country) + regionsByYear.get(y).get(country).get("python"));
+				} else {
+					iip.put(country, regionsByYear.get(y).get(country).get("python"));					
+				}
+			}
+		}
+		int mostint = 0;
+		String pyregion = "";
+		
+		for (String c : iip.keySet()) 
+			if (iip.get(c) > mostint) {
+				mostint = iip.get(c);
+				pyregion = c;
+			}
+		
+		TreeMap<String, Integer> leastint = new TreeMap<>();
+		for (int y = 2010; y <= 2015; y++) {
+			for (String lang : langs) {
+				if (leastint.containsKey(lang)) {
+					leastint.put(lang, leastint.get(lang) + regionsByYear.get(y).get(pyregion).get(lang));
+				} else {
+					leastint.put(lang, regionsByYear.get(y).get(pyregion).get(lang));					
+				}
+			}
+		}
+		int least = leastint.get(leastint.firstKey());
+		String leastlang = "";
+		for (String l : leastint.keySet()) 
+			if (leastint.get(l) < least) {
+				least = leastint.get(l);
+				leastlang = l;
+			}
+		
+		System.out.println("10) Since 2010, which regions have demonstrated the most interests in Python, and "
+				+ "which programming languages were those regions least interested in?");
+		System.out.println("The region most interested in Python was " + pyregion + ", which was least interested in " + leastlang);
+		System.out.println("");
+		
+		//11) Which are the top 5 regions that demonstrated significant growth of interests in programming languages in general? 
+
+		Map<String, ArrayList<Integer>> yearsOfCountries = new HashMap<>();
+		for (String country : countries) {
+			ArrayList<Integer> yoc = new ArrayList<>();
+			for (int year : regionsByYear.keySet())
+				if (regionsByYear.get(year).keySet().contains(country))
+					yoc.add(year);
+			Collections.sort(yoc);
+			yearsOfCountries.put(country, yoc);
+		}
+		
+		HashMap<String, TreeMap<String, Integer>> yearlyChangeByCountry = new HashMap<>();
+		
+		for (String country : countries) {
+			ArrayList<Integer> yoc = yearsOfCountries.get(country);
+			TreeMap<String, Integer> yearlyChange = new TreeMap<>();
+			for (int i = 0; i < yoc.size() - 1; i++) {
+				String changeTime = yoc.get(i) + "-" + yoc.get(i + 1);
+				int interest1 = 0;
+				for (String l : regionsByYear.get(yoc.get(i)).get(country).keySet()) {
+					interest1 += regionsByYear.get(yoc.get(i)).get(country).get(l);
+				}
+				int interest2 = 0;
+				for (String l : regionsByYear.get(yoc.get(i + 1)).get(country).keySet()) {
+					interest2 += regionsByYear.get(yoc.get(i + 1)).get(country).get(l);
+				}				
+				int change = interest2 - interest1;
+				yearlyChange.put(changeTime, change);
+			}
+			yearlyChangeByCountry.put(country, yearlyChange);
+		}
+		
+		TreeMap<Integer, String> avrgChangeByCountry = new TreeMap<>();
+		for (String country : yearlyChangeByCountry.keySet()) {
+			double amount = 0;
+			double all = 0;
+			for (String time : yearlyChangeByCountry.get(country).keySet()) {
+				all += yearlyChangeByCountry.get(country).get(time);
+				amount++;
+			}
+			int ave = (int) Math.round(all/amount);
+			avrgChangeByCountry.put(ave, country);
+		}
+		
+		TreeMap<Integer, String> overallChange = new TreeMap<>();
+		for (String country : countries) {
+			List<Integer> yoc = yearsOfCountries.get(country);
+			int interest1 = 0;
+			for (String l : regionsByYear.get(yoc.get(0)).get(country).keySet()) {
+				interest1 += regionsByYear.get(yoc.get(0)).get(country).get(l);
+			}
+			int interest2 = 0;
+			for (String l : regionsByYear.get(yoc.get(yoc.size() - 1)).get(country).keySet()) {
+				interest2 += regionsByYear.get(yoc.get(yoc.size() - 1)).get(country).get(l);
+			}				
+			overallChange.put(interest2 - interest1, country);
+		}
+		System.out.println("11) Which are the top 5 regions that demonstrated significant growth of interests in programming languages in general?");
+		System.out.printf("%45s\n","Based on overall change");
+		System.out.printf("%20s\t%20s\t%20s\n", "Country", "Overall change", "Change on Average");
+
+		int overall = overallChange.lastKey();
+		for (int i = 0; i < 5; i++) {
+			if (i > 0)
+				overall = overallChange.lowerKey(overall);
+			String country = overallChange.get(overall);
+			int average = 0;
+			for (int a : avrgChangeByCountry.keySet())
+				if (avrgChangeByCountry.get(a).equals(country))
+					average = a;
+			System.out.printf("%20s\t%10d\t%15d\n", country, overall, average);
+		}
+		
+		System.out.printf("\n%50s\n" ,"Based on average yearly change");
+		System.out.printf("%20s\t%20s\t%20s\n", "Country", "Overall change", "Change on Average");
+		int average = avrgChangeByCountry.lastKey();
+		for (int i = 0; i < 5; i++) {
+			if (i > 0)
+				average = avrgChangeByCountry.lowerKey(average);
+			String country = avrgChangeByCountry.get(average);
+			for (int o : overallChange.keySet())
+				if (overallChange.get(o).equals(country))
+					overall = o;
+			System.out.printf("%20s\t%10d\t%15d\n", country, overall, average);
+		}				
+		System.out.println("");
+
+		//12) Which programming language set the record for losing the most interests over a 12 months period? When did this happen?
+		
+		TreeMap<Integer, String> deepestDeclineByLang = new TreeMap<>();
+		Map<String, String> ddbl = new HashMap<>();
+		
+		for (String lang : langs) {
+			int deepestDecline = 0;
+			String weekAndDecline = "";
+			String wk = iot.firstKey();
+			for (int j = 0; j < iot.keySet().size() - 52; j++) {
+				if (j > 0)
+					wk = iot.higherKey(wk);
+				int first = iot.get(wk).get(lang);
+				String wk2 = wk;
+				for (int i = 0; i < 52; i++){
+					wk2 = iot.higherKey(wk2);
+				}
+				int decline = iot.get(wk2).get(lang) - first;
+				if (decline < deepestDecline) {
+					deepestDecline = decline;
+					weekAndDecline = lang + " had the deepest decline over 12 months (" + deepestDecline + 
+							"), and it happened between weeks " + wk + " and " + wk2;
+				}
+			}
+			deepestDeclineByLang.put(deepestDecline, lang);
+			ddbl.put(lang, weekAndDecline);
+		}
+		
+		System.out.println("12) Which programming language set the record for losing the most interests over a 12 months period? "
+				+ "When did this happen?");
+		System.out.println(ddbl.get(deepestDeclineByLang.get(deepestDeclineByLang.firstKey())));
+		System.out.println("");
+		
+		//13) Languages popular at University may be higher in September and October - this means the Sept/Oct average is higher than
+		//    the whole year average. Show this trend for the language Java
+		
+		ArrayList<String> yearlyStart = new ArrayList<>();
+		TreeMap<String, String> septToOct = new TreeMap<>();
+		for (String wk : iot.keySet()) {
+			String [] date = wk.split("-");
+			for (int i = 0; i < date.length; i++) {
+				date[i] = date[i].trim();
+			}
+			if ((date[1].equals("09") && date[2].equals("01")) || (date[1].equals("08") && Integer.parseInt(date[2]) >= 26))
+				yearlyStart.add(wk);
+			if (date[1].equals("10") && Integer.parseInt(date[2]) >= 25)
+				septToOct.put(yearlyStart.get(yearlyStart.size() - 1), wk);
+		}
+		System.out.println("13) Languages popular at University may be higher in September and October. Show this trend for the language Java.\n");
+		System.out.printf("%7s\t%11s\t%8s\n", "Ac Year", "Sep/Oct", "All Year");
+
+		HashMap<String, Double> soAve = new HashMap<>();
+		for (String wk : septToOct.keySet()) {
+			double sepoct = 0;
+			int seoc = 0;
+			String wk2 = wk;
+			while (true) {
+				sepoct += iot.get(wk).get("java");
+				seoc++;
+				wk = iot.higherKey(wk);
+				if (wk.equals(septToOct.get(wk2)))
+						break;
+			}
+			soAve.put(wk2, sepoct / seoc);
+		}
+				
+		for (int i = 0; i < yearlyStart.size(); i++) {
+			int nextYear = (Integer.parseInt(yearlyStart.get(i).substring(2,4)) + 1);
+			String year = yearlyStart.get(i).substring(0,4) + "/" + nextYear;
+			if (nextYear < 10)
+				year = yearlyStart.get(i).substring(0,4) + "/0" + nextYear;
+			acc = 0;
+			double all = 0;
+			String wk = yearlyStart.get(i).trim();
+			String wk2 = wk;
+			if (i < yearlyStart.size() - 1) {
+				while (!wk.equals(yearlyStart.get(i + 1))) {
+					all += iot.get(wk).get("java");
+					acc++;
+					wk = iot.higherKey(wk);
+				} 
+			} else
+				while (!wk.equals(iot.lastKey())) {
+					all += iot.get(wk).get("java");
+					acc++;
+					wk = iot.higherKey(wk);
+				} 				
+			double aveYear = all / acc;
+
+			System.out.printf("%7s\t%10.2f\t%3.2f\n", year, soAve.get(wk2), aveYear);
+		}
+		
+		System.out.println("");
+		
+		//14) Which pair of languages is most strongly correlated week by week? 
+		Map<String, ArrayList<Integer>> listedInterest = new HashMap<>();
+		for (String lang : langs) {
+			ArrayList<Integer> interests = new ArrayList<>();
+			for (String wk : iot.keySet())
+				interests.add(iot.get(wk).get(lang));
+			listedInterest.put(lang, interests);
+		}
+		
+		TreeMap<String, Double> pearsons = new TreeMap<>();
+		
+		for (int i = 0; i < langs.size(); i++) {
+			ArrayList<Integer> first = listedInterest.get(langs.get(i));
+			int size = first.size();
+			for (int j = langs.size() - 1; j > i; j--) {
+				ArrayList<Integer> second = listedInterest.get(langs.get(j));
+				double sumofprod = 0;
+				double sumoffirst = 0;
+				double sumofsecond = 0;
+				for (int wk = 0; wk < size; wk++) {
+					sumofprod += first.get(wk)*second.get(wk);
+					sumoffirst += first.get(wk)*first.get(wk);
+					sumofsecond += second.get(wk)*second.get(wk);
+				}
+				double pearson = (sumofprod - (size*mean(first)*mean(second)))/
+						(Math.sqrt(sumoffirst - size*mean(first)*mean(first))*
+								Math.sqrt(sumofsecond - size*mean(second)*mean(second)));
+				String output = "The two most strongly correlating languages are " + langs.get(i) +
+						" and " + langs.get(j) + " (" + pearson + ")";
+				pearsons.put(output, pearson);
+			}
+		}
+		
+		System.out.println("14) Which pair of languages is most strongly correlated week by week?");
+		double corr = 0;
+		String output = "";
+		for (String o : pearsons.keySet())
+			if (pearsons.get(o) > corr) {
+				corr = pearsons.get(o);
+				output = o;
+			}
+		System.out.println(output + "\n");
+			
+		//15) Which language had the deepest continuous decline and when? N.B. NOT longest
+		List<String> weeklist = Collections.list(Collections.enumeration(iot.keySet()));
+		Map<String, TreeMap<Integer, String>> declineByLangs = new HashMap<>();
+		for (String l : langs) {
+			int deepdecline = 0;
+			String startend = "";
+			TreeMap<Integer, String> declineTime = new TreeMap<>();
+			for (int i = 0; i < weeklist.size() - 1; i++) {
+				int decline = 0;
+				int change = 0;
+				int j = i;
+				while (change <= 0) {
+					decline += change;
+					change  = iot.get(weeklist.get(j + 1)).get(l) - iot.get(weeklist.get(j)).get(l);
+					j++;
+					if (j >= 606) 
+						change = 100;
+				}
+				if (decline < deepdecline) {
+					deepdecline = decline;
+					startend = " between " + Collections.list(Collections.enumeration(iot.keySet())).get(i) + 
+							" and " + Collections.list(Collections.enumeration(iot.keySet())).get(j - 1);
+				}
+				declineTime.put(deepdecline, startend);
+			}
+			declineByLangs.put(l, declineTime);
+		}
+		
+		int steep = 0;		
+		for (String l : declineByLangs.keySet())
+			if (steep > declineByLangs.get(l).firstKey()) {
+				steep = declineByLangs.get(l).firstKey();
+				output = l + " had the deepest continuous decline (" + steep + ")" + declineByLangs.get(l).get(steep);
+			}
+		System.out.println("15) Which language had the deepest continuous decline and when?");
+		System.out.println(output);
+	}
+	
+	public static double mean(ArrayList<Integer> al) {
+		double sum = 0;
+		for (int i : al) {
+			sum += i;
+		}
+		return sum / al.size();
+	}
+}
+
